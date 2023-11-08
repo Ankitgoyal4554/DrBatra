@@ -1,0 +1,169 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+# Define the base URL of the website
+
+
+# List of category URLs to scrape
+base_url ="https://products.drbatras.com/products/"
+add_urls = [
+            "dr-batra-s-age-defying-skin-firming-serum-50-g/","dr-batra-s-normal-shampoo/"
+            ]    
+
+# Create an empty list to store all product data
+all_product_data = []
+
+for url in add_urls:
+# Construct the full URL for the category
+
+    product_url = base_url+url
+    # Send an HTTP GET request to the category page
+    response = requests.get(product_url)
+    
+    # Check if the request was successful (status code 200)
+    if response.status_code == 200:
+        # Parse the HTML content of the category page using BeautifulSoup
+        soup = BeautifulSoup(response.content, 'html.parser')
+    
+        # Create lists to store product details for this category
+        product_names = []
+        product_prices = []
+        product_SKU = []
+        product_benef = []
+        product_ingred = []
+        product_detail = []
+        product_description = []
+        benefit =[]
+        benefit=""
+        ingredient = ""
+        ab=""
+        bc=""
+        cd=""
+        other =""
+        htext =""
+        ptext = ""
+        product_size = ""
+        prod_description =""
+        prod_benefits = ""
+        prod_ingredients = ""
+        prod_details = ""
+#         product_sku = []
+        totalbf =""
+        
+#         k=soup.find("h1", class="ProductMeta__Title Heading u-h2").text
+# # ----------------------------------------------   PRODUCT NAME  --------------------------------------
+        product_elements = soup.find_all('div', class_='ProductMeta')
+        
+        for product in product_elements:
+            product_name = product.find('h1', class_='ProductMeta__Title Heading u-h2').text.strip()
+#             print(product_name)
+            
+# # --------------------------------------------------------------------------------------------------------
+# # -------------------------------------     Product Price    ---------------------------------------------
+        product_price = soup.find_all('div',class_='ProductMeta__PriceList Heading')
+        
+        for product in product_price : 
+            product_price = product.find('span',class_ = 'ProductMeta__Price Price Price--highlight Text--subdued u-h4').text.strip()
+#             print(product_price)
+# # ---------------------------------------------------------------------------------------------------------
+# # ----------------------------------------    SKU Size    -------------------------------------------------
+        product_sku = soup.find_all('ul', class_='SizeSwatchList HorizontalList HorizontalList--spacingTight')
+    
+        for product in product_sku :
+            lis=product.find_all('li',class_='HorizontalList__Item')
+            for li in lis:
+                product_size = li.find('label').text.strip()+ ", " + product_size 
+#             print(product_size)
+# # ----------------------------------------------------------------------------------------------------------
+# ------------------------------------------ Description ------------------------------------------------
+        product_description = soup.find_all('span',class_='easytabs-header-text ui-tabs-anchor js-no-transition')
+        
+        for product in product_description :
+            if product.text.strip() == "Description" :
+                des = product.find_next('div', class_='easytabs-content-holder')
+            description = des.find_all('p')
+        for descrip in description :
+            prod_description = descrip.text.strip() + "\n" + prod_description
+#         print(prod_description)
+
+# -------------------------------------------------------------------------------------------------------------
+# -----------------------------------------    Benefits     ---------------------------------------------------
+        product_benefits = soup.find_all('span',class_='easytabs-header-text ui-tabs-anchor js-no-transition')
+        
+        for product in product_benefits :
+            if product.text.strip() == "Benefits:-" :
+                des = product.find_next('div', class_='easytabs-content-holder')
+            if product.text.strip() == "Benefits" :
+                des = product.find_next('div', class_='easytabs-content-holder')
+            benefits = des.find_all('li')
+        for benefit in benefits :
+            prod_benefits = benefit.text.strip() + "\n" + prod_benefits
+#         print(prod_benefits)
+    
+# -------------------------------------------------------------------------------------------------------------
+# -----------------------------------------    Ingredients     ---------------------------------------------------
+        product_ingredients = soup.find_all('span',class_='easytabs-header-text ui-tabs-anchor js-no-transition')
+        
+        for product in product_ingredients :
+            if product.text.strip() == "Key Ingredients:-" :
+                ingred = product.find_next('div', class_='easytabs-content-holder')
+            elif product.text.strip() == "Ingredients" :
+                ingred = product.find_next('div', class_='easytabs-content-holder')
+                ingredients = ingred.find_all('li')
+            for ingredient in ingredients :
+                prod_ingredients = ingredient.text.strip() + "\n" + prod_ingredients
+#         print(prod_ingredients)
+# ----------------------------------------------------------------------------------------------------------------
+# -----------------------------------------    Product Details     ----------------------------------------------- 
+        product_details = soup.find_all('span',class_='easytabs-header-text ui-tabs-anchor js-no-transition')
+        
+        for product in product_details :
+            if product.text.strip() == "Product Details:-" :
+                dt = product.find_next('div', class_='easytabs-content-holder')
+            elif product.text.strip() == "Other Details:-" :
+                dt = product.find_next('div', class_='easytabs-content-holder')
+            details = dt.find_all('ul')
+            if details is not None: 
+                for detail in details :
+                    prod_details = detail.text.strip() + detail.find('span').text.strip() + "\n" + prod_details  
+#         print(prod_details)    
+
+# -----------------------------------------------------------------------------------------------------------------
+# -------------------------------------    Appending Queries    -----------------------------------------------------
+    
+# #     Adding the required data into a tabular format.
+    
+        product_names.append(product_name)
+        product_prices.append(product_price)
+        product_SKU.append(product_size)    
+        product_description.append(prod_description)
+        product_benef.append(prod_benefits)
+        product_ingred.append(prod_ingredients)
+        product_detail.append(prod_details)
+   
+    
+# #         # Create a DataFrame for this category's product data
+        category_product_data = {
+                                    'Product Name': product_names,
+                                    'Product Price': product_prices,
+                                    'Product SKU': product_SKU,
+                                    'Description': product_description,
+                                    'Product Benefits': product_benef,
+                                    'Product Ingredients': product_ingred,
+                                    'Product Details' : product_detail
+                                    }
+    
+# #         # Append the category data to the overall list
+        all_product_data.append(category_product_data)
+    
+    else:
+        print(f"Failed to retrieve the category page: {category_url}")
+    
+# # # Create a master DataFrame containing data from all categories
+master_df = pd.concat([pd.DataFrame(data) for data in all_product_data], ignore_index=True)
+    
+# # # Save the master DataFrame to a CSV file
+master_df.to_csv('Dr_Batra_Products.csv', index=False)
+print("All product details scraped and saved to 'all_product_details.csv'")
+master_df.head()
